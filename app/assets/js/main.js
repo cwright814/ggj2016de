@@ -1,6 +1,10 @@
 
 var stage, w, h, loader;
-var ground;
+var ground, character;
+var KEYCODE_w = 37, 
+    KEYCODE_A = 65,
+    KEYCODE_S = 83, 
+    KEYCODE_D = 68;
 
 function init() {
     stage = new createjs.Stage("arena");
@@ -10,6 +14,7 @@ function init() {
     h = stage.canvas.height;
 
     manifest = [
+        {src: "spritesheet_placeholder.png", id: "character"},
         {src: "ground.png", id: "ground"}
     ];
 
@@ -23,13 +28,30 @@ function handleComplete() {
     var groundImg = loader.getResult("ground");
     ground = new createjs.Shape();
 
-    var matrix = new createjs.Matrix2D();
+    hill2 = new createjs.Bitmap(loader.getResult("hill2"));
 
-    ground.graphics.beginBitmapFill(groundImg, "repeat", matrix).drawRect(0, 0, w + groundImg.width, groundImg.height);
+    ground.graphics.beginBitmapFill(groundImg).drawRect(0, 0, w + groundImg.width, groundImg.height);
     ground.tileW = groundImg.width;
     ground.y = h - groundImg.height;
 
-    stage.addChild(ground);
+    var spriteSheet = new createjs.SpriteSheet({
+        framerate: 30,
+        "images": [loader.getResult("character")],
+        "frames": {"regX": 82, "height": 292, "count": 64, "regY": 0, "width": 165},
+        // define two animations, run (loops, 1.5x speed) and jump (returns to run):
+        "animations": {
+            "run": [0, 25, "run", 1],
+            "stand": [58, 60, "stand", 0.25],
+            "jump": [26, 63, "run"]
+        }
+    });
+
+    character = new createjs.Sprite(spriteSheet, "stand");
+    character.y = 215;
+    character.x = w/2;
+
+
+    stage.addChild(ground, character);
     createjs.Ticker.timingMode = createjs.Ticker.RAF;
     createjs.Ticker.addEventListener("tick", tick);
 }
@@ -120,4 +142,18 @@ function colliding() {
       return true;
   }
   return false;
+}
+
+function keyPressed(event) {
+    switch(event.keyCode) {
+        case KEYCODE_W:  
+            break;
+        case KEYCODE_A: 
+            break;
+        case KEYCODE_S: 
+            break;
+        case KEYCODE_D: 
+            break;
+    }
+    stage.update();
 }
