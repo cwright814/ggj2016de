@@ -1,6 +1,5 @@
-
 var stage, w, h, loader;
-var ground, character;
+var ground, player, tilesets;
 var KEYCODE_w = 37, 
     KEYCODE_A = 65,
     KEYCODE_S = 83, 
@@ -24,6 +23,27 @@ function init() {
 }
 
 function handleComplete() {
+    player = {
+        width: 32,
+        height: 64,
+        pos: {
+            x: w/2,
+            y: 354},
+        speed: {
+            x: 0,
+            y: 0},
+        ground: true,
+        land: actorLand,
+        setbounds: setBounds,
+        updatepos: updatePos,
+        initsensor: initSensor,
+        update: actorUpdate,
+        updatesensors: actorUpdateSensors
+    };
+    player.initsensor("right", 4, player.height-8, player.width/2, 0);
+    player.initsensor("left", 4, player.height-8, -player.width/2, 0);
+    player.initsensor("bottom", player.width, 4, 0, player.height/2);
+    player.initsensor("top", player.width, 4, 0, -player.height/2);
 
     var groundImg = loader.getResult("ground");
     ground = new createjs.Shape();
@@ -37,7 +57,7 @@ function handleComplete() {
     var spriteSheet = new createjs.SpriteSheet({
         framerate: 30,
         "images": [loader.getResult("character")],
-        "frames": {"regX": 82, "height": 292, "count": 64, "regY": 0, "width": 165},
+        "frames": {"regX": 82, "height": 292, "count": 64, "regY": 146, "width": 165},
         // define two animations, run (loops, 1.5x speed) and jump (returns to run):
         "animations": {
             "run": [0, 25, "run", 1],
@@ -46,57 +66,39 @@ function handleComplete() {
         }
     });
 
-    character = new createjs.Sprite(spriteSheet, "stand");
-    character.y = 215;
-    character.x = w/2;
+    player.sprite = new createjs.Sprite(spriteSheet, "stand");
+    player.sprite.x = player.pos.x;
+    player.sprite.y = player.pos.y;
 
-
-    stage.addChild(ground, character);
+    stage.addChild(ground, player.sprite);
     createjs.Ticker.timingMode = createjs.Ticker.RAF;
     createjs.Ticker.addEventListener("tick", tick);
 }
 
 function tick(event) {
+    if (!player.ground && player.speed.y > 0 && player.sensor.bottom.colliding())
+        player.land();
+
     stage.update(event);
 }
 
-var player = {
-    width: 32,
-    height: 64,
-    pos: {
-        x: w/2,
-        y: h/2},
-    speed: {
-        x: 0,
-        y: 0},
-    ground: true,
-    land: playerLand,
-    setbounds: setBounds,
-    updatepos: updatePos,
-    initsensor: initSensor,
-    update: playerUpdate
-};
-player.initsensor("right", 4, player.height-8, player.width/2, 0);
-player.initsensor("left", 4, player.height-8, -player.width/2, 0);
-player.initsensor("bottom", player.width, 4, 0, player.height/2);
-player.initsensor("top", player.width, 4, 0, -player.height/2);
-
-if (!player.ground && player.speed.y > 0 && player.sensor.bottom.colliding())
-    player.land();
-
-function playerLand() {
-    player.ground = true;
-    player.speed.y = 0;
+function actorLand() {
+    this.ground = true;
+    this.speed.y = 0;
     // Add repositioning logic here
 }
 
-function playerUpdate() {
+function actorUpdate() {
     this.updatepos();
+    this.updatesensors();
+}
+
+function actorUpdateSensors() {
     for (var i = 0; i < this.sensor.length; i++)
         this.sensor[i].updatepos();
 }
 
-function initSensor(label, width, height, offsetX, offsetY) {
+function initSensor(label, width, height, offsetX, offsetY) { // Creates child (sensor) for parent
     if (typeof(this.sensor) === 'undefined')
         this.sensor = {};
     this.sensor[label] = {
@@ -117,16 +119,20 @@ function initSensor(label, width, height, offsetX, offsetY) {
 }
 
 function updatePos(delta) {
-    if (typeof(this.offset) !== 'undefined') {
+    if (typeof(this.offset) !== 'undefined') { // Sensor positioning
         this.pos.x = parent.pos.x + this.offset.x;
         this.pos.y = parent.pos.y + this.offset.y;
-    } else if (typeof(this.speed) !== 'undefined') {
+    } else if (typeof(this.speed) !== 'undefined') { // Player positioning
         this.pos.x += this.speed.x * delta;
         this.pos.y += this.speed.y * delta;
     }
+    if (typeof(this.sprite) !== 'undefined') { // Sprite positioning
+        this.sprite.x = this.pos.x;
+        this.sprite.y = this.pos.y;
+    }
 }
 
-function setBounds() {
+function setBounds() { // Calculates object bounds for collision detection
     this.bound = {
         right: this.pos.x + this.width/2,
         left: this.pos.x - this.width/2,
@@ -135,8 +141,10 @@ function setBounds() {
     };
 }
 
-function colliding() {
+function colliding(objects) { // Compares object bounds vs objects[] to test for collision
     this.setbounds();
+    if (typeof(objects) === 'undefined')
+      objects = tilesets;
     for (var i = 0; i < objects.length; i++) {
         var object = objects[i];
         if (this.bound.right > object.bound.left &&
@@ -150,14 +158,14 @@ function colliding() {
 
 function keyPressed(event) {
     switch(event.keyCode) {
-        case KEYCODE_W:  
+        case KEYCODE_W:
             break;
-        case KEYCODE_A: 
+        case KEYCODE_A:
             break;
-        case KEYCODE_S: 
+        case KEYCODE_S:
             break;
-        case KEYCODE_D: 
+        case KEYCODE_D:
             break;
     }
-    stage.update();
+    // stage.update();
 }
