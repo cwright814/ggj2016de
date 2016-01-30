@@ -24,7 +24,8 @@ function init() {
         {src: 'ground.png', id: 'ground'},
         {src: 'projectile.png', id: 'projectile'},
         {src: 'background-2.png', id: 'background'},
-        {src: 'enemy1-spritesheet.png', id: 'enemy1'}
+        {src: 'enemy1-spritesheet.png', id: 'enemy1'},
+        {src: 'girl-spirit-spritesheet.png', id: 'girl-spirit'},
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -168,19 +169,29 @@ function addGameScreen() {
     });
 
     player.sprite = new createjs.Sprite(spriteSheet, 'stand');
-    //player.sprite.x = player.pos.x;
-    //player.sprite.y = player.pos.y;
   
     enemySpriteSheet1 = new createjs.SpriteSheet({
-        framerate: 30,
+        framerate: 10,
         'images': [loader.getResult('enemy1')],
-        'frames': {'width': 138, 'height': 138, 'regX': 69, 'regY': 69, 'count': 8},
+        'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 8},
         'animations': {
             'walk': [5, 7],
-            'die': {'frames': [2,1,3,4]},
-            'hit': {'frames': [0,5]}
+            'die': {'frames': [1,2,3,4]},
+            'hit': {'frames': [4,5]}
         }
     });
+  
+    var spiritSpriteSheet = new createjs.SpriteSheet({
+        framerate: 12,
+        'images': [loader.getResult('girl-spirit')],
+        'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 7},
+        'animations': {
+            'float': [0, 3, 'float', 0.5],
+        }
+    });
+    var spiritSprite = new createjs.Sprite(spiritSpriteSheet, 'float');
+    spiritSprite.x = w/2;
+    spiritSprite.y = h/2;
 
     /*
     spriteSheetPlatform = new createjs.SpriteSheet({
@@ -204,17 +215,19 @@ function addGameScreen() {
         }
     }
   
-    stage.addChild(player.sprite);
+    for ( k = 0; k < 4; k++ ) {
+        spawnEnemy(); 
+    }
+  
+    stage.addChild(spiritSprite, player.sprite);
 }
 
 function spawnEnemy() {
-    enemy = new Actor(138, 138, 100, 350, 'walk', false);
+    enemy = new Actor(64, 128, 100, 350, 'walk', false);
     enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
     enemy.initsensor('right', 4, enemy.height-8, enemy.width/2, 0);
     enemy.initsensor('left', 4, enemy.height-8, -enemy.width/2, 0);
     enemy.initsensor('bottom', enemy.width, 4, 0, enemy.height/2);
-    enemy.sprite.x = enemy.pos.x;
-    enemy.sprite.y = enemy.pos.y;
     enemy.speed.x = 100;
     enemies.push(enemy)
     stage.addChild(enemy.sprite);
@@ -297,11 +310,11 @@ function tick(event) {
                 player.state = 'fall';
         }
 
-        // Update player and sensors
+        // Update actors and sensors
         player.update();
 
         // Projectiles update/destruction
-        for(var i = 0; i < projectiles.length; i++) { 
+        for (var i = 0; i < projectiles.length; i++) { 
             var projectile = projectiles[i];
             projectile.updatepos();
             // Remove projectiles no longer on screen
@@ -328,6 +341,21 @@ function tick(event) {
             player.sprite.scaleX = 1;
         else if (player.speed.x < 0 && player.sprite.scaleX == 1)
             player.sprite.scaleX = -1;
+        
+        // Now do the same thing for the enemies
+        for (var i = 0; i < enemies.length; i++) {
+            var enemy = enemies[i];
+          
+            if (!enemy.ground)
+                enemy.speed.y += 1200 * delta;
+
+            if (!enemy.ground && enemy.speed.y > 0 && enemy.sensor.bottom.colliding())
+                enemy.land();
+            if (enemy.ground && !enemy.sensor.bottom.colliding())
+                enemy.ground = false;
+          
+            enemy.update();
+        }
         break;
     default:
         break;
