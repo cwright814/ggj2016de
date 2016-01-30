@@ -1,5 +1,6 @@
 var stage, w, h, loader;
 var input, ground, player, tilesets = [];
+var projectiles;
 
 
 function init() {
@@ -11,7 +12,9 @@ function init() {
 
     manifest = [
         {src: 'spritesheet_placeholder.png', id: 'character'},
-        {src: 'ground.png', id: 'ground'}
+        {src: 'ground.png', id: 'ground'},
+        {src: 'projectile.png', id: 'projectile'}
+
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -38,6 +41,7 @@ function handleComplete() {
             y: 0},
         state: 'stand',
         ground: true,
+        shoot: actorShoot,
         jump: actorJump,
         land: actorLand,
         setbounds: setBounds,
@@ -55,7 +59,6 @@ function handleComplete() {
     var groundImg = loader.getResult('ground');
     ground = new createjs.Shape();
 
-    hill2 = new createjs.Bitmap(loader.getResult('hill2'));
 
     ground.graphics.beginBitmapFill(groundImg).drawRect(0, 0, w + groundImg.width, groundImg.height);
     ground.tileW = groundImg.width;
@@ -70,6 +73,8 @@ function handleComplete() {
         setbounds: setBounds
     });
     tilesets[0].setbounds();
+
+    projectiles = new Array();
 
     var spriteSheet = new createjs.SpriteSheet({
         framerate: 30,
@@ -97,24 +102,25 @@ function handleComplete() {
 
 function tick(event) {
     var delta = event.delta / 1000;
-  
+
     // Player inputs
     player.speed.x = 0;
-  
+
     if (input.right) {
         player.speed.x = 300;
     }
     if (input.left) {
         player.speed.x = -300;
+
     }
     if (input.jump && player.ground) {
         player.jump();
     }
-  
+
     // Player momentum
     if (!player.ground)
         player.speed.y += 1200 * delta;
-  
+
     // Player states
     if (player.ground) {
         if (player.speed.x == 0)
@@ -131,7 +137,17 @@ function tick(event) {
   
     // Update player and sensors
     player.update(delta);
-  
+
+    // Projectiles
+    for(var i = 0; i < projectiles.length; i++) { 
+        projectiles[i].graphic.x += projectiles[i].speed * projectiles[i].direction;
+        // Remove projectiles no longer on screen
+        if (projectiles[i].graphic.x < 0 || projectiles[i].graphic.x > w) {
+            stage.removeChild(projectiles[i].graphic);
+            projectiles.splice(i, 1);
+        }
+    }
+
     // Check for collisions
     if (!player.ground && player.speed.y > 0 && player.sensor.bottom.colliding())
         player.land();
@@ -139,17 +155,29 @@ function tick(event) {
     // Set player animation
     if (player.sprite.currentAnimation != player.state)
         player.sprite.gotoAndPlay(player.state);
-  
+
     // Set player orientation
     if (player.speed.x > 0 && player.sprite.scaleX == -1)
         player.sprite.scaleX = 1;
     else if (player.speed.x < 0 && player.sprite.scaleX == 1)
         player.sprite.scaleX = -1;
-  
+
     // Update stage
     stage.update(event);
 }
 
+function actorShoot() {
+    var projectile = {
+        speed: 10,
+        direction: player.sprite.scaleX,
+        graphic: new createjs.Bitmap(loader.getResult("projectile"))
+    };
+
+    projectile.graphic.x = player.pos.x;
+    projectile.graphic.y = player.pos.y;
+    projectiles.push(projectile);
+    stage.addChild(projectile.graphic);
+}
 
 function actorJump() {
     this.ground = false;
@@ -243,6 +271,7 @@ function keyPressedDown() {
     }
     if (key.isPressed('space') || key.isPressed('s')) {
         input.fire = true;
+        player.shoot();
     }
 }
 
@@ -260,4 +289,3 @@ function keyPressedUp() {
         input.fire = false;
     }
 }
-
