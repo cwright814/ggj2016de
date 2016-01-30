@@ -142,7 +142,7 @@ function tick(event) {
     for(var i = 0; i < projectiles.length; i++) { 
         projectiles[i].graphic.x += projectiles[i].speed * projectiles[i].direction;
         // Remove projectiles no longer on screen
-        if (projectiles[i].graphic.x < 0 || projectiles[i].graphic.x > w) {
+        if (projectiles[i].graphic.x < 0 - projectiles[i].graphic.width || projectiles[i].graphic.x > w) {
             stage.removeChild(projectiles[i].graphic);
             projectiles.splice(i, 1);
         }
