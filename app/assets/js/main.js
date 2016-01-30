@@ -1,9 +1,6 @@
 var stage, w, h, loader;
 var ground, player, tilesets;
-var KEYCODE_w = 37, 
-    KEYCODE_A = 65,
-    KEYCODE_S = 83, 
-    KEYCODE_D = 68;
+
 
 function init() {
     stage = new createjs.Stage("arena");
@@ -30,7 +27,7 @@ function handleComplete() {
             x: w/2,
             y: 354},
         speed: {
-            x: 0,
+            x: 2,
             y: 0},
         ground: true,
         land: actorLand,
@@ -78,7 +75,7 @@ function handleComplete() {
 function tick(event) {
     if (!player.ground && player.speed.y > 0 && player.sensor.bottom.colliding())
         player.land();
-
+    keyPressed(event);
     stage.update(event);
 }
 
@@ -157,15 +154,12 @@ function colliding(objects) { // Compares object bounds vs objects[] to test for
 }
 
 function keyPressed(event) {
-    switch(event.keyCode) {
-        case KEYCODE_W:
-            break;
-        case KEYCODE_A:
-            break;
-        case KEYCODE_S:
-            break;
-        case KEYCODE_D:
-            break;
+    if (key.isPressed('left') || key.isPressed('a')) {
+        player.speed.x = -1
+        player.updatepos(event.delta);
     }
-    // stage.update();
+    if (key.isPressed('right') || key.isPressed('d')) {
+        player.speed.x = 1
+        player.updatepos(event.delta);
+    }
 }
