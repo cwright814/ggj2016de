@@ -233,10 +233,10 @@ function tick(event) {
         // Player inputs
         player.speed.x = 0;
 
-        if (input.right) {
+        if (input.right && player.pos.x <= w) {
             player.speed.x = 300;
         }
-        if (input.left) {
+        if (input.left && player.pos.x >= 0) {
             player.speed.x = -300;
         }
         if (input.jump && player.ground) {
