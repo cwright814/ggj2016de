@@ -81,27 +81,19 @@ player.initsensor("left", 4, player.height-8, -player.width/2, 0);
 player.initsensor("top", player.width, 4, 0, player.height/2);
 player.initsensor("bottom", player.width, 4, 0, -player.height/2);
 
-if (player.sensor.bottom.colliding())
+if (!player.ground && player.speed.y < 0 && player.sensor.bottom.colliding())
   player.land();
 
 function playerLand() {
   player.ground = true;
   player.speed.y = 0;
+  // Add repositioning logic here
 }
 
 function playerUpdate() {
   this.updatepos();
   for (var i = 0; i < this.sensor.length; i++)
     this.sensor[i].updatepos();
-}
-
-function setBounds() {
-  this.bound = {
-    right: this.pos.x + this.width/2,
-    left: this.pos.x - this.width/2,
-    top: this.pos.y + this.height/2,
-    bottom: this.pos.y - this.height/2
-  };
 }
 
 function initSensor(label, width, height, offsetX, offsetY) {
@@ -116,6 +108,7 @@ function initSensor(label, width, height, offsetX, offsetY) {
       x: offsetX,
       y: offsetY
     },
+    parent: this,
     setbounds: setBounds,
     updatepos: updatePos
   };
@@ -123,12 +116,21 @@ function initSensor(label, width, height, offsetX, offsetY) {
 
 function updatePos(delta) {
   if (typeof(this.offset) !== undefined) {
-    this.pos.x = player.pos.x + this.offset.x;
-    this.pos.y = player.pos.y + this.offset.y;
+    this.pos.x = parent.pos.x + this.offset.x;
+    this.pos.y = parent.pos.y + this.offset.y;
   } else if (typeof(this.speed) !== undefined) {
     this.pos.x += this.speed.x * delta;
     this.pos.y += this.speed.y * delta;
   }
+}
+
+function setBounds() {
+  this.bound = {
+    right: this.pos.x + this.width/2,
+    left: this.pos.x - this.width/2,
+    top: this.pos.y + this.height/2,
+    bottom: this.pos.y - this.height/2
+  };
 }
 
 function colliding() {
