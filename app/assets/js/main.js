@@ -60,15 +60,50 @@ function Actor(width, height, x, y, state, ground) {
     this.colliding = colliding;
 }
 
-function addTitleScreen() {
-    var titleText = new createjs.Text("Bring Me Back", "36px Arial", "#000");
-    titleText.textAlign = "center";
-    titleText.x = w/2;
-    titleText.y = 0;
-    stage.addChild(titleText);
+function handleComplete() {
+    addTitleScreen();
 }
 
-function handleComplete() {
+function addTitleScreen() {
+    stage.enableMouseOver(10);
+    var titleText = new createjs.Text("Bring Me Back", "48px Tahoma, Geneva, sans-serif", "#FFF");
+    titleText.textAlign = "center";
+    titleText.x = w/2;
+    titleText.y = 100;
+
+    var startText = new createjs.Text("Start", "32px Tahoma, Geneva, sans-serif", "#FFF");
+    startText.x = w/2 - 32;
+    startText.y = 300;
+    startText.alpha = 0.5;
+
+    var hitArea = new createjs.Shape();
+    hitArea.graphics.beginFill("#FFF").drawRect(0, 0, startText.getMeasuredWidth()+5, startText.getMeasuredHeight()+10);
+    startText.hitArea = hitArea;
+
+    startText.on("mouseover", hoverEffect);
+    startText.on("mouseout", hoverEffect);
+    startText.on("mousedown", transitionTitleView);
+
+    TitleView.addChild(titleText, startText);
+    stage.addChild(TitleView);
+    stage.update();
+
+}
+
+function hoverEffect(event) {
+    event.target.alpha = (event.type == "mouseover") ? '1' : '0.5'; 
+    stage.update()
+}
+
+function transitionTitleView() {       
+    // Todo: Maybe try to fade out title screen. 
+    stage.removeChild(TitleView);
+    TitleView = null;
+    addGameScreen();
+}
+
+function addGameScreen() {
+    stage.enableMouseOver(0);
     input = {
         left: false,
         right: false,
@@ -181,7 +216,7 @@ function tick(event) {
         projectile.updatepos();
         // Remove projectiles no longer on screen
         if (projectile.sprite.x < -projectile.sprite.getBounds().width || projectile.sprite.x > w) {
-            stage.removeChild(projectile.graphic);
+            stage.removeChild(projectile.sprite);
             projectiles.splice(i, 1);
         }
     }
