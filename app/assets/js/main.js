@@ -21,7 +21,7 @@ function init() {
         {src: 'spritesheet_placeholder.png', id: 'character'},
         {src: 'ground.png', id: 'ground'},
         {src: 'projectile.png', id: 'projectile'},
-        {src: 'background.png', id: 'background'}
+        {src: 'background-2.png', id: 'background'}
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -124,6 +124,7 @@ function addGameScreen() {
 
     var groundImg = loader.getResult('ground');
     ground = new createjs.Shape();
+    ground.alpha = 0;
 
 
     ground.graphics.beginBitmapFill(groundImg).drawRect(0, 0, w + groundImg.width, groundImg.height);
