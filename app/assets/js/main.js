@@ -195,7 +195,7 @@ function addGameScreen() {
 }
 
 function addPlatform(x, y) {
-    var length = 3 + Math.floor(Math.random() * 3) * 2;
+    var length = 5 + Math.floor(Math.random() * 3) * 3;
     var spriteImg = loader.getResult('platform');
     var sprite = new createjs.Shape();
     sprite.graphics.beginBitmapFill(spriteImg).drawRect(0, 0, spriteImg.width * length, spriteImg.height);
