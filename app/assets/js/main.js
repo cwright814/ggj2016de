@@ -168,9 +168,9 @@ function addGameScreen() {
         'images': [loader.getResult('character')],
         'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 36, 'count': 30},
         'animations': {
-            'stand': [0, 9, 'stand', 0.5],
-            'run': [10, 19, 'run', 0.75],
-            'jump': [20, 23, 'jump', 2],
+            'stand': [0, 9, 'stand', 0.25],
+            'run': [10, 19, 'run', 0.6],
+            'jump': [20, 23, 'jump', 1.25],
             'fall': [24, 29, 'fall', 1]
         }
     });
