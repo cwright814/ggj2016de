@@ -32,6 +32,7 @@ function init() {
         {src: 'spirit-orb-spritesheet.png', id: 'orb'},
         {src: 'girl-spirit-spritesheet.png', id: 'girl-spirit'},
         {src: 'plume-heart.png', id: 'life'},
+        {src: 'title-bg.png', id: 'title-bg'}
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -59,7 +60,7 @@ function Actor(width, height, x, y, state, ground) {
         y: 0};
     this.state = state;
     this.ground = ground;
-    this.health = 5;
+    this.health = 7;
     this.groundIgnore = 0;
     this.shoot = actorShoot;
     this.jump = actorJump;
@@ -93,14 +94,12 @@ function addTitleScreen() {
     this.document.onkeydown = keyPressedDown;
     this.document.onkeyup = keyPressedUp;
   
-    var titleText = new createjs.Text('Bring Me Back', '48px Tahoma, Geneva, sans-serif', '#FFF');
-    titleText.textAlign = 'center';
-    titleText.x = w/2;
-    titleText.y = 100;
-
-    var startText = new createjs.Text('Start', '32px Tahoma, Geneva, sans-serif', '#FFF');
+    var titleBg = new createjs.Shape();
+    titleBg.graphics.beginBitmapFill(loader.getResult('title-bg')).drawRect(0, 0, w, h);
+  
+    var startText = new createjs.Text('Start', '32px Tahoma, Geneva, sans-serif', '#000');
     startText.x = w/2 - 32;
-    startText.y = 300;
+    startText.y = 350;
     startText.alpha = 0.5;
 
     var hitArea = new createjs.Shape();
@@ -111,7 +110,7 @@ function addTitleScreen() {
     startText.on('mouseout', hoverEffect);
     startText.on('mousedown', transitionTitleView);
   
-    TitleView.addChild(titleText, startText);
+    TitleView.addChild(titleBg, startText);
     stage.addChild(TitleView);
     stage.update();
 }
@@ -139,7 +138,6 @@ function addGameScreen() {
     player.initsensor('bottom2', player.width, 4, 0, player.height/2-1);
     //player.initsensor('top', player.width, 4, 0, -player.height/2);
     player.hasFired = false;
-    player.health = 5;
 
     background = new createjs.Shape();
     background.graphics.beginBitmapFill(loader.getResult('background')).drawRect(0, 0, w, h);
@@ -148,7 +146,6 @@ function addGameScreen() {
     var groundImg = loader.getResult('ground');
     ground = new createjs.Shape();
     ground.alpha = 0;
-
 
     ground.graphics.beginBitmapFill(groundImg).drawRect(0, 0, w + groundImg.width, groundImg.height);
     ground.tileW = groundImg.width;
@@ -169,14 +166,14 @@ function addGameScreen() {
     var spriteSheet = new createjs.SpriteSheet({
         framerate: 30,
         'images': [loader.getResult('character')],
-        'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 36, 'count': 30},
+        'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 36, 'count': 32},
         'animations': {
             'stand': [0, 9, 'stand', 0.25],
             'run': [10, 19, 'run', 0.6],
             'jump': [20, 23, 'jump', 0.75],
             'fall': [24, 29, 'fall', 0.75],
-            'shootGround': [30, 30, 'stand', 0.75],
-            'shootAir': [31, 31, 'jump', 0.75]
+            'shootGround': [30, 30, 'stand', 0.25],
+            'shootAir': [31, 31, 'jump', 0.25]
         }
     });
 
@@ -354,6 +351,11 @@ function tick(event) {
         if (input.fire && !player.hasFired) {
             player.shoot();
             player.hasFired = true;
+            if (player.ground)
+                player.state = 'shootGround';
+            else
+                player.state = 'shootAir';
+            player.sprite.gotoAndPlay(player.state);
         }
         if (player.hasFired && !input.fire) {
             player.hasFired = false;
@@ -370,17 +372,24 @@ function tick(event) {
             spirit.speed.y += 40 * delta;
 
         // Player states
-        if (player.ground) {
-            if (player.speed.x == 0)
-                player.state = 'stand';
-            else
-                player.state = 'run';
+        if (player.state != 'shootGround' && player.state != 'shootAir') {
+            if (player.ground) {
+                if (player.speed.x == 0)
+                    player.state = 'stand';
+                else
+                    player.state = 'run';
+            }
+            else {
+                if (player.speed.y <= 0)
+                    player.state = 'jump';
+                else
+                    player.state = 'fall';
+            }
         }
-        else {
-            if (player.speed.y <= 0)
-                player.state = 'jump';
-            else
-                player.state = 'fall';
+        
+        if (player.state == 'shootGround' || player.state == 'shootAir') {
+            if (player.sprite.currentAnimation != player.state)
+                player.state = player.sprite.currentAnimation;
         }
 
         // Update actors and sensors
@@ -498,7 +507,7 @@ function tick(event) {
 
 function actorShoot() {
     var projectile = new Actor(24, 6, this.pos.x-12, this.pos.y+24);
-    projectile.speed.x = 1000 * this.sprite.scaleX;
+    projectile.speed.x = 1500 * this.sprite.scaleX;
     projectile.sprite = new createjs.Bitmap(loader.getResult('projectile'));
     projectile.sprite.scaleX = this.sprite.scaleX;
 

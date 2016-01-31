@@ -3,9 +3,7 @@
   "version": "0.0.1",
   "description": "Our Game",
   "dependencies": {
-    "gsap": "1.18.0",
     "easeljs": "0.8.2",
-    "createjs-soundjs": "0.6.2",
     "PreloadJS": "0.6.2",
     "keymaster": "1.6.3"
   }
