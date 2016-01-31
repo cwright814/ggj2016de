@@ -111,11 +111,11 @@ function addGameScreen() {
         fire: false
     };
   
-    player = new Actor(292, 165, w/2, 410, 'stand', true);
-    player.initsensor('right', 4, player.height-8, player.width/2, 0);
-    player.initsensor('left', 4, player.height-8, -player.width/2, 0);
+    player = new Actor(82, 292, w/2, 350, 'stand', true);
+    //player.initsensor('right', 4, player.height-8, player.width/2, 0);
+    //player.initsensor('left', 4, player.height-8, -player.width/2, 0);
     player.initsensor('bottom', player.width, 4, 0, player.height/2);
-    player.initsensor('top', player.width, 4, 0, -player.height/2);
+    //player.initsensor('top', player.width, 4, 0, -player.height/2);
     player.hasFired = false;
 
     background = new createjs.Shape();
@@ -145,7 +145,7 @@ function addGameScreen() {
     var spriteSheet = new createjs.SpriteSheet({
         framerate: 30,
         'images': [loader.getResult('character')],
-        'frames': {'regX': 82, 'height': 292, 'count': 64, 'regY': 204, 'width': 165},
+        'frames': {'width': 165, 'height': 292, 'regX': 82, 'regY': 140, 'count': 64},
         'animations': {
             'run': [0, 25, 'run', 1],
             'stand': [56, 59, 'stand', 0.25],
@@ -158,12 +158,47 @@ function addGameScreen() {
     player.sprite.x = player.pos.x;
     player.sprite.y = player.pos.y;
 
-    stage.addChild(background, ground, player.sprite);
+    stage.addChild(background, ground);
+    
+    // Generate platforms
+    for ( i = 1; i < 5; i++ ) {
+        var x = Math.random() * 980 + 24;
+        var y = Math.random() * 540;
+        addPlatform(x, y);
+    }
+  
+    stage.addChild(player.sprite);
+  
     createjs.Ticker.timingMode = createjs.Ticker.RAF;
     createjs.Ticker.addEventListener('tick', tick);
   
     this.document.onkeydown = keyPressedDown;
     this.document.onkeyup = keyPressedUp;
+}
+
+function addPlatform(x, y) {
+    //var sprite = new createjs.Bitmap(spriteImg);
+    var length = 3 + Math.floor(Math.random() * 3) * 2;
+    var spriteImg = loader.getResult('ground');
+    var sprite = new createjs.Shape();
+    sprite.graphics.beginBitmapFill(spriteImg).drawRect(0, 0, spriteImg.width * length, spriteImg.height);
+    sprite.x = Math.round(x);
+    sprite.y = Math.round(y);
+    sprite.snapToPixel = true;
+  
+    platform = {
+        width: spriteImg.width * length,
+        height: spriteImg.height,
+        pos: {
+            x: sprite.x + (spriteImg.width * length)/2,
+            y: sprite.y + spriteImg.height/2},
+        sprite: sprite,
+        setbounds: setBounds
+    }
+    platform.setbounds();
+
+    tilesets.push(platform);
+    stage.addChild(platform.sprite);
 }
 
 function tick(event) {
@@ -210,7 +245,7 @@ function tick(event) {
     // Update player and sensors
     player.update();
 
-    // Projectiles
+    // Projectiles update/destruction
     for(var i = 0; i < projectiles.length; i++) { 
         var projectile = projectiles[i];
         projectile.updatepos();
@@ -224,6 +259,8 @@ function tick(event) {
     // Check for collisions
     if (!player.ground && player.speed.y > 0 && player.sensor.bottom.colliding())
         player.land();
+    if (player.ground && !player.sensor.bottom.colliding())
+        player.ground = false;
 
     // Set player animation
     if (player.sprite.currentAnimation != player.state)
