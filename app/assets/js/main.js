@@ -69,6 +69,7 @@ function Actor(width, height, x, y, state, ground) {
     this.update = actorUpdate;
     this.updatesensors = actorUpdateSensors;
     this.colliding = colliding;
+    this.reposition = actorReposition;
 }
 
 function handleComplete() {
@@ -90,23 +91,23 @@ function addTitleScreen() {
     this.document.onkeydown = keyPressedDown;
     this.document.onkeyup = keyPressedUp;
   
-    var titleText = new createjs.Text("Bring Me Back", "48px Tahoma, Geneva, sans-serif", "#FFF");
-    titleText.textAlign = "center";
+    var titleText = new createjs.Text('Bring Me Back', '48px Tahoma, Geneva, sans-serif', '#FFF');
+    titleText.textAlign = 'center';
     titleText.x = w/2;
     titleText.y = 100;
 
-    var startText = new createjs.Text("Start", "32px Tahoma, Geneva, sans-serif", "#FFF");
+    var startText = new createjs.Text('Start', '32px Tahoma, Geneva, sans-serif', '#FFF');
     startText.x = w/2 - 32;
     startText.y = 300;
     startText.alpha = 0.5;
 
     var hitArea = new createjs.Shape();
-    hitArea.graphics.beginFill("#FFF").drawRect(0, 0, startText.getMeasuredWidth()+5, startText.getMeasuredHeight()+10);
+    hitArea.graphics.beginFill('#FFF').drawRect(0, 0, startText.getMeasuredWidth()+5, startText.getMeasuredHeight()+10);
     startText.hitArea = hitArea;
 
-    startText.on("mouseover", hoverEffect);
-    startText.on("mouseout", hoverEffect);
-    startText.on("mousedown", transitionTitleView);
+    startText.on('mouseover', hoverEffect);
+    startText.on('mouseout', hoverEffect);
+    startText.on('mousedown', transitionTitleView);
   
     TitleView.addChild(titleText, startText);
     stage.addChild(TitleView);
@@ -114,7 +115,7 @@ function addTitleScreen() {
 }
 
 function hoverEffect(event) {
-    event.target.alpha = (event.type == "mouseover") ? '1' : '0.5'; 
+    event.target.alpha = (event.type == 'mouseover') ? '1' : '0.5'; 
     stage.update()
 }
 
@@ -129,10 +130,11 @@ function addGameScreen() {
     stage.enableMouseOver(0);
     stage.state = 'game';
   
-    player = new Actor(64, 128, w/2, 480, 'stand', true);
+    player = new Actor(64, 128, w/2, 558, 'stand', true);
     player.initsensor('right', 4, player.height-8, player.width/2, 0);
     player.initsensor('left', 4, player.height-8, -player.width/2, 0);
     player.initsensor('bottom', player.width, 4, 0, player.height/2);
+    player.initsensor('bottom2', player.width, 4, 0, player.height/2-1);
     //player.initsensor('top', player.width, 4, 0, -player.height/2);
     player.hasFired = false;
 
@@ -228,7 +230,7 @@ function addGameScreen() {
     timerSource = setInterval('spawnEnemy()', 3000); 
 
     for(var i = 0; i < 3; i++) { 
-        var life = new createjs.Bitmap(loader.getResult("life"));
+        var life = new createjs.Bitmap(loader.getResult('life'));
           
         life.x = 5 + (28 * i); 
         life.y = 5;
@@ -258,6 +260,7 @@ function spawnEnemy() {
     enemy.initsensor('right', 4, enemy.height-8, enemy.width/2, 0);
     enemy.initsensor('left', 4, enemy.height-8, -enemy.width/2, 0);
     enemy.initsensor('bottom', enemy.width, 4, 0, enemy.height/2);
+    enemy.initsensor('bottom2', enemy.width, 4, 0, enemy.height/2-1);
     enemy.speed.x = getRandomInt(100, 300) * direction;
     enemy.sprite.scaleX = direction;
     enemy.sprite.alpha = 0.6;
@@ -313,7 +316,7 @@ function tick(event) {
         if (input.jump && player.ground) {
             if (!input.down)
                 player.jump();
-            else if (player.pos.y < 430)
+            else if (player.pos.y < 500)
                 player.fall();
         }
         if (input.fire && !player.hasFired) {
@@ -423,7 +426,14 @@ function actorFall() {
 function actorLand() {
     this.ground = true;
     this.speed.y = 0;
-    // Add repositioning logic here
+    this.reposition();
+}
+
+function actorReposition() {
+    while (this.sensor.bottom2.colliding()) {
+        this.pos.y -= 1;
+        this.updatesensors();
+    }
 }
 
 function actorUpdate() {
