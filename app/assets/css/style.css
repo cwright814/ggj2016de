@@ -1,4 +1,8 @@
 body {
-    background: #F3F3F3;
+    background: #CECECE;
     text-align: center;
+}
+
+canvas {
+	border: 3px solid black;
 }

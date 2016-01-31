@@ -2,12 +2,12 @@
 var stage, w, h, loader, delta;
 
 // Title Screen
-var startButton;
 var TitleView = new createjs.Container();
 
 // Game Screen
 var input, ground, player, tilesets = [];
 var projectiles, spriteSheetPlatform;
+var enemySpritSheet1, enemySpriteSheet2, enemeySpritSheet3;
 var enemies = [];
 
 
@@ -25,6 +25,9 @@ function init() {
         {src: 'projectile.png', id: 'projectile'},
         {src: 'background-2.png', id: 'background'},
         {src: 'enemy1-spritesheet.png', id: 'enemy1'},
+        {src: 'enemy2-spritesheet.png', id: 'enemy2'},
+        {src: 'enemy3-spritesheet.png', id: 'enemy3'},
+        {src: 'spirit-orb-spritesheet.png', id: 'orb'},
         {src: 'girl-spirit-spritesheet.png', id: 'girl-spirit'},
     ];
 
@@ -176,10 +179,22 @@ function addGameScreen() {
         'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 8},
         'animations': {
             'walk': [5, 7],
-            'die': {'frames': [1,2,3,4]},
-            'hit': {'frames': [4,5]}
+            'die': [0, 3],
+            'hit': [4, 5]
         }
     });
+
+    enemySpriteSheet2 = new createjs.SpriteSheet({
+        framerate: 10,
+        'images': [loader.getResult('enemy2')],
+        'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 10},
+        'animations': {
+            'walk': [5, 9],
+            'die': [0, 3],
+            'hit': [4, 5]
+        }
+    });
+  
   
     var spiritSpriteSheet = new createjs.SpriteSheet({
         framerate: 12,
@@ -191,18 +206,7 @@ function addGameScreen() {
     });
     var spiritSprite = new createjs.Sprite(spiritSpriteSheet, 'float');
     spiritSprite.x = w/2;
-    spiritSprite.y = h/2;
-
-    /*
-    spriteSheetPlatform = new createjs.SpriteSheet({
-        framerate: 8,
-        'images': [loader.getResult('platform')],
-        'frames': {'width': 48, 'height': 48, 'regX': 0, 'regY': 0, 'count': 4},
-        'animations': {
-            'pulse': {'frames': [0,0,1,1,3,3,2,2,2,2,3,3,1,1,0,0]}
-        }
-    });
-    */
+    spiritSprite.y = h/2
 
     stage.addChild(background, ground);
     
@@ -214,21 +218,26 @@ function addGameScreen() {
             addPlatform(x, y);
         }
     }
-  
+    /*
     for ( k = 0; k < 4; k++ ) {
         spawnEnemy(); 
     }
+    */
+    timerSource = setInterval('spawnEnemy()', 3000); 
   
     stage.addChild(spiritSprite, player.sprite);
 }
 
 function spawnEnemy() {
-    enemy = new Actor(64, 128, 100, 350, 'walk', false);
+    var direction = Math.random() < 0.5 ? -1 : 1;
+    var xStart  = direction == -1 ? w+30: -30;
+    enemy = new Actor(64, 128, xStart, getRandomInt(100, 500), 'walk', false);
     enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
     enemy.initsensor('right', 4, enemy.height-8, enemy.width/2, 0);
     enemy.initsensor('left', 4, enemy.height-8, -enemy.width/2, 0);
     enemy.initsensor('bottom', enemy.width, 4, 0, enemy.height/2);
-    enemy.speed.x = 100;
+    enemy.speed.x = getRandomInt(100, 300) * direction;
+    enemy.sprite.scaleX = direction;
     enemies.push(enemy)
     stage.addChild(enemy.sprite);
 }
@@ -345,6 +354,10 @@ function tick(event) {
         // Now do the same thing for the enemies
         for (var i = 0; i < enemies.length; i++) {
             var enemy = enemies[i];
+            if (enemy.sprite.x < -enemy.sprite.width-30 || enemy.sprite.x > w+30) {
+                stage.removeChild(enemy.sprite);
+                enemies.splice(i, 1);
+            }
           
             if (!enemy.ground)
                 enemy.speed.y += 1200 * delta;
@@ -493,4 +506,8 @@ function keyPressedUp() {
     if (!key.isPressed('space') && !key.isPressed('enter')) {
         input.fire = false;
     }
+}
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min)) + min;
 }
