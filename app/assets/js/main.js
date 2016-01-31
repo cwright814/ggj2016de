@@ -8,6 +8,7 @@ var TitleView = new createjs.Container();
 // Game Screen
 var input, ground, player, tilesets = [];
 var projectiles, spriteSheetPlatform;
+var enemies = [];
 
 
 function init() {
@@ -19,10 +20,11 @@ function init() {
 
     manifest = [
         {src: 'spritesheet_placeholder.png', id: 'character'},
-        {src: 'tile2.png', id: 'platform'},
+        {src: 'tile4.png', id: 'platform'},
         {src: 'ground.png', id: 'ground'},
         {src: 'projectile.png', id: 'projectile'},
-        {src: 'background-2.png', id: 'background'}
+        {src: 'background-2.png', id: 'background'},
+        {src: 'enemy1-spritesheet.png', id: 'enemy1'}
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -121,7 +123,7 @@ function addGameScreen() {
     stage.enableMouseOver(0);
     stage.state = 'game';
   
-    player = new Actor(82, 292, w/2, 350, 'stand', true);
+    player = new Actor(82, 292, w/2, 480, 'stand', true);
     player.initsensor('right', 4, player.height-8, player.width/2, 0);
     player.initsensor('left', 4, player.height-8, -player.width/2, 0);
     player.initsensor('bottom', player.width, 4, 0, player.height/2);
@@ -166,9 +168,20 @@ function addGameScreen() {
     });
 
     player.sprite = new createjs.Sprite(spriteSheet, 'stand');
-    player.sprite.x = player.pos.x;
-    player.sprite.y = player.pos.y;
+    //player.sprite.x = player.pos.x;
+    //player.sprite.y = player.pos.y;
   
+    enemySpriteSheet1 = new createjs.SpriteSheet({
+        framerate: 30,
+        'images': [loader.getResult('enemy1')],
+        'frames': {'width': 138, 'height': 138, 'regX': 69, 'regY': 69, 'count': 8},
+        'animations': {
+            'walk': [5, 7],
+            'die': {'frames': [2,1,3,4]},
+            'hit': {'frames': [0,5]}
+        }
+    });
+
     /*
     spriteSheetPlatform = new createjs.SpriteSheet({
         framerate: 8,
@@ -184,9 +197,9 @@ function addGameScreen() {
     
     // Generate platforms
     for ( k = 0; k < 4; k++ ) {
-        for ( i = 0; i < 2; i++ ) {
-            var x = Math.random() * (w - 48);
-            var y = Math.random() * (h/4 - 96) + h/5*k + 96;
+        for ( i = 0; i < 3; i++ ) {
+            var x = Math.floor((Math.random() * (w - 108)) / 24) * 24;
+            var y = Math.floor((Math.random() * (h/4 - 48) + h/5*k + 48) / 48) * 48;
             addPlatform(x, y);
         }
     }
@@ -194,8 +207,21 @@ function addGameScreen() {
     stage.addChild(player.sprite);
 }
 
+function spawnEnemy() {
+    enemy = new Actor(138, 138, 100, 350, 'walk', false);
+    enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
+    enemy.initsensor('right', 4, enemy.height-8, enemy.width/2, 0);
+    enemy.initsensor('left', 4, enemy.height-8, -enemy.width/2, 0);
+    enemy.initsensor('bottom', enemy.width, 4, 0, enemy.height/2);
+    enemy.sprite.x = enemy.pos.x;
+    enemy.sprite.y = enemy.pos.y;
+    enemy.speed.x = 100;
+    enemies.push(enemy)
+    stage.addChild(enemy.sprite);
+}
+
 function addPlatform(x, y) {
-    var length = 5 + Math.floor(Math.random() * 3) * 3;
+    var length = 5 + Math.floor(Math.random() * 4) * 4;
     var spriteImg = loader.getResult('platform');
     var sprite = new createjs.Shape();
     sprite.graphics.beginBitmapFill(spriteImg).drawRect(0, 0, spriteImg.width * length, spriteImg.height);
@@ -242,7 +268,7 @@ function tick(event) {
         if (input.jump && player.ground) {
             if (!input.down)
                 player.jump();
-            else if (player.pos.y < 410)
+            else if (player.pos.y < 430)
                 player.fall();
         }
         if (input.fire && !player.hasFired) {
@@ -327,7 +353,7 @@ function actorJump() {
 
 function actorFall() {
     this.ground = false;
-    this.groundIgnore = 0.3;
+    this.groundIgnore = 0.25;
 }
 
 function actorLand() {
