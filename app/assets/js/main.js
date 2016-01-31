@@ -20,7 +20,7 @@ function init() {
     h = stage.canvas.height;
 
     manifest = [
-        {src: 'spritesheet_placeholder.png', id: 'character'},
+        {src: 'huyana.png', id: 'character'},
         {src: 'tile4.png', id: 'platform'},
         {src: 'ground.png', id: 'ground'},
         {src: 'projectile.png', id: 'projectile'},
@@ -129,7 +129,7 @@ function addGameScreen() {
     stage.enableMouseOver(0);
     stage.state = 'game';
   
-    player = new Actor(82, 292, w/2, 480, 'stand', true);
+    player = new Actor(64, 128, w/2, 480, 'stand', true);
     player.initsensor('right', 4, player.height-8, player.width/2, 0);
     player.initsensor('left', 4, player.height-8, -player.width/2, 0);
     player.initsensor('bottom', player.width, 4, 0, player.height/2);
@@ -164,12 +164,12 @@ function addGameScreen() {
     var spriteSheet = new createjs.SpriteSheet({
         framerate: 30,
         'images': [loader.getResult('character')],
-        'frames': {'width': 165, 'height': 292, 'regX': 82, 'regY': 140, 'count': 64},
+        'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 36, 'count': 30},
         'animations': {
-            'run': [0, 25, 'run', 1],
-            'stand': [56, 59, 'stand', 0.25],
-            'jump': [36, 36, 'jump'],
-            'fall': [53, 53, 'fall']
+            'stand': [0, 9, 'stand', 0.5],
+            'run': [10, 19, 'run', 0.75],
+            'jump': [20, 23, 'jump', 2],
+            'fall': [24, 29, 'fall', 1]
         }
     });
 
@@ -197,7 +197,6 @@ function addGameScreen() {
         }
     });
   
-  
     var spiritSpriteSheet = new createjs.SpriteSheet({
         framerate: 12,
         'images': [loader.getResult('girl-spirit')],
@@ -206,6 +205,7 @@ function addGameScreen() {
             'float': [0, 3, 'float', 0.5],
         }
     });
+
     var spiritSprite = new createjs.Sprite(spiritSpriteSheet, 'float');
     spiritSprite.x = w/2;
     spiritSprite.y = h/2;
@@ -417,7 +417,7 @@ function actorJump() {
 
 function actorFall() {
     this.ground = false;
-    this.groundIgnore = 0.25;
+    this.groundIgnore = 0.2;
 }
 
 function actorLand() {
