@@ -5,10 +5,11 @@ var stage, w, h, loader, delta;
 var TitleView = new createjs.Container();
 
 // Game Screen
-var input, ground, player, tilesets = [];
+var input, ground, player, spirit;
 var projectiles, spriteSheetPlatform;
 var enemySpritSheet1, enemySpriteSheet2, enemeySpritSheet3;
-var enemies = [];
+var orbSpriteSheet, spiritCount, scoreText;
+var tilesets = [], enemies = [], orbs = [];
 var lives = new createjs.Container();
 
 
@@ -58,6 +59,7 @@ function Actor(width, height, x, y, state, ground) {
         y: 0};
     this.state = state;
     this.ground = ground;
+    this.health = 5;
     this.groundIgnore = 0;
     this.shoot = actorShoot;
     this.jump = actorJump;
@@ -137,6 +139,7 @@ function addGameScreen() {
     player.initsensor('bottom2', player.width, 4, 0, player.height/2-1);
     //player.initsensor('top', player.width, 4, 0, -player.height/2);
     player.hasFired = false;
+    player.health = 5;
 
     background = new createjs.Shape();
     background.graphics.beginBitmapFill(loader.getResult('background')).drawRect(0, 0, w, h);
@@ -170,21 +173,24 @@ function addGameScreen() {
         'animations': {
             'stand': [0, 9, 'stand', 0.25],
             'run': [10, 19, 'run', 0.6],
-            'jump': [20, 23, 'jump', 1.25],
-            'fall': [24, 29, 'fall', 1]
+            'jump': [20, 23, 'jump', 0.75],
+            'fall': [24, 29, 'fall', 0.75],
+            'shootGround': [30, 30, 'stand', 0.75],
+            'shootAir': [31, 31, 'jump', 0.75]
         }
     });
 
     player.sprite = new createjs.Sprite(spriteSheet, 'stand');
-  
+
     enemySpriteSheet1 = new createjs.SpriteSheet({
         framerate: 10,
         'images': [loader.getResult('enemy1')],
         'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 8},
         'animations': {
             'walk': [5, 7],
-            'die': [0, 3],
-            'hit': [4, 5]
+            'die': [0, 3, 'end'],
+            'hit': [4, 5, 'walk'],
+            'end': [-1]
         }
     });
 
@@ -194,43 +200,37 @@ function addGameScreen() {
         'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 64, 'count': 10},
         'animations': {
             'walk': [5, 9],
-            'die': [0, 3],
-            'hit': [4, 5]
+            'die': [0, 3, 'end'],
+            'hit': [4, 5, 'walk'],
+            'end': [-1]
         }
     });
-  
+
+    orbSpriteSheet = new createjs.SpriteSheet({
+        framerate: 8,
+        'images': [loader.getResult('orb')],
+        'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 64, 'count': 4},
+        'animations': {
+            'pulse': [0, 3],
+        }
+    });
+
     var spiritSpriteSheet = new createjs.SpriteSheet({
         framerate: 12,
         'images': [loader.getResult('girl-spirit')],
         'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 7},
         'animations': {
             'float': [0, 3, 'float', 0.5],
+            'absorb': [4, 6, 'float', 0.5]
         }
     });
 
-    var spiritSprite = new createjs.Sprite(spiritSpriteSheet, 'float');
-    spiritSprite.x = w/2;
-    spiritSprite.y = h/2;
-
-    stage.addChild(background, ground, spiritSprite);
-    
-    // Generate platforms
-    for ( k = 0; k < 4; k++ ) {
-        for ( i = 0; i < 3; i++ ) {
-            var x = Math.floor((Math.random() * (w - 108)) / 24) * 24;
-            var y = Math.floor((Math.random() * (h/4 - 48) + h/5*k + 48) / 48) * 48;
-            addPlatform(x, y);
-        }
-    }
-    /*
-    for ( k = 0; k < 4; k++ ) {
-        spawnEnemy(); 
-    }
-    */
-    timerSource = setInterval('spawnEnemy()', 3000); 
+    spirit = new Actor(64, 128, w/2, h/2-64, 'float');
+    spirit.sprite = new createjs.Sprite(spiritSpriteSheet, 'float');
+    spirit.speed.y = 50;
 
     // Add lives
-    for(var i = 0; i < 3; i++) { 
+    for(var i = 0; i < player.health; i++) { 
         var life = new createjs.Bitmap(loader.getResult('life'));
         life.x = 5 + (20 * i); 
         life.y = 5;
@@ -240,31 +240,63 @@ function addGameScreen() {
         lives.addChild(life); 
     }
 
-    stage.addChild(player.sprite, lives);
+    score = new createjs.Text('0', 'bold 18px Tahoma, Geneva, sans-serif', '#111');
+    score.x = w-5;
+    score.y = 2;
+    score.textAlign = 'right';
+
+    stage.addChild(background, ground, spirit.sprite);
+
+    // Generate platforms
+    for ( k = 0; k < 4; k++ ) {
+        for ( i = 0; i < 3; i++ ) {
+            var x = Math.floor((Math.random() * (w - 108)) / 24) * 24;
+            var y = Math.floor((Math.random() * (h/4 - 48) + h/5*k + 48) / 48) * 48;
+            addPlatform(x, y);
+        }
+    }
+
+    stage.addChild(player.sprite, lives, score);
+
+    timerSource = setInterval('spawnEnemy()', 3000); 
+    timerSource = setInterval('spawnEnemy()', 5521); 
+    timerSource = setInterval('spawnEnemy()', 8967);
+    timerSource = setInterval('spawnEnemy()', 14745);
+    timerSource = setInterval('spawnEnemy()', 26119);
+}
+
+function spawnOrb(x, y) {
+    var orb = new Actor(24, 24, x, y, 'pulse');
+    orb.sprite = new createjs.Sprite(orbSpriteSheet, 'pulse');
+    orb.alpha = 0.8;
+    orbs.push(orb);
+    stage.addChild(orb.sprite);
 }
 
 function spawnEnemy() {
     var direction = Math.random() < 0.5 ? -1 : 1;
-    var xStart  = direction == -1 ? w+30: -30;
+    var xStart  = direction == -1 ? w+30 : -30;
     var enemyType = getRandomInt(1, 3);
     switch (enemyType) {
-        case 1:
-            enemy = new Actor(64, 128, xStart, getRandomInt(100, 500), 'walk', false);
-            enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
-            break;
-        case 2:
-            enemy = new Actor(64, 128, xStart, getRandomInt(100, 500), 'walk', false);
-            enemy.sprite = new createjs.Sprite(enemySpriteSheet2, 'walk');
-            break;
+    case 1:
+        var enemy = new Actor(64, 128, xStart, getRandomInt(-100, 500), 'walk');
+        enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
+        enemy.health = 2;
+        break;
+    case 2:
+        var enemy = new Actor(64, 128, xStart, getRandomInt(-100, 500), 'walk');
+        enemy.sprite = new createjs.Sprite(enemySpriteSheet2, 'walk');
+        enemy.health = 3;
+        break;
     }
     enemy.initsensor('right', 4, enemy.height-8, enemy.width/2, 0);
     enemy.initsensor('left', 4, enemy.height-8, -enemy.width/2, 0);
     enemy.initsensor('bottom', enemy.width, 4, 0, enemy.height/2);
     enemy.initsensor('bottom2', enemy.width, 4, 0, enemy.height/2-1);
     enemy.speed.x = getRandomInt(100, 300) * direction;
-    enemy.sprite.scaleX = direction;
+    enemy.sprite.scaleX = enemyType == 2 ? 0-direction : direction;
     enemy.sprite.alpha = 0.6;
-    enemies.push(enemy)
+    enemies.push(enemy);
     stage.addChild(enemy.sprite);
 }
 
@@ -313,10 +345,10 @@ function tick(event) {
         if (input.left && player.pos.x >= 0) {
             player.speed.x = -300;
         }
-        if (input.jump && player.ground) {
-            if (!input.down)
+        if (player.ground) {
+            if (input.jump)
                 player.jump();
-            else if (player.pos.y < 500)
+            else if (input.down && player.pos.y < 500)
                 player.fall();
         }
         if (input.fire && !player.hasFired) {
@@ -330,6 +362,12 @@ function tick(event) {
         // Player momentum
         if (!player.ground)
             player.speed.y += 1200 * delta;
+        
+        // Spirit momentum
+        if (spirit.pos.y > h/2-64)
+            spirit.speed.y -= 40 * delta;
+        if (spirit.pos.y < h/2-64)
+            spirit.speed.y += 40 * delta;
 
         // Player states
         if (player.ground) {
@@ -347,6 +385,7 @@ function tick(event) {
 
         // Update actors and sensors
         player.update();
+        spirit.update();
 
         // Projectiles update/destruction
         for (var i = 0; i < projectiles.length; i++) { 
@@ -360,12 +399,48 @@ function tick(event) {
 
             // Check projectile and enemy collision
             for (var j = 0; j < enemies.length; j++) {
-                console.log(projectile.sprite.x);
-                if (enemies[j].sprite.hitTest(projectile.sprite.x, projectile.sprite.y)) {
-                    console.log('hit enemy');
+                var enemy = enemies[j];
+                var currAnim = enemy.sprite.currentAnimation;
+                if (currAnim != 'end' && currAnim != 'die' && currAnim != 'hit' && projectile.colliding(enemy)) {
+                    enemy.sprite.gotoAndPlay('hit');
+                    enemy.health -= 1;
+                    if (enemy.health <= 0 && currAnim != 'die') {
+                        enemy.sprite.gotoAndPlay('die');
+                        spawnOrb(enemy.pos.x, enemy.pos.y+36);
+                        enemy.speed.x = 0;
+                    }
+                }
+                else if (currAnim == 'end') {
+                    stage.removeChild(enemy.sprite);
+                    enemies.splice(j, 1);
                 }
             }
-
+        }
+        
+        for (var i = 0; i < orbs.length; i++) {
+            var orb = orbs[i];
+            var orbDist = Math.sqrt(Math.pow(Math.abs(orb.pos.x-spirit.pos.x),2) + Math.pow(Math.abs(orb.pos.y-spirit.pos.y),2));
+            var orbAccel = Math.max(Math.pow(orbDist,2)/80, 800);
+          
+            // Orb momentum
+            if (orb.pos.x < spirit.pos.x)
+                orb.speed.x += orbAccel * delta;
+            if (orb.pos.x > spirit.pos.x)
+                orb.speed.x -= orbAccel * delta;
+            if (orb.pos.y < spirit.pos.y)
+                orb.speed.y += orbAccel * delta;
+            if (orb.pos.y > spirit.pos.y)
+                orb.speed.y -= orbAccel * delta;
+          
+            if (orb.colliding(spirit)) {
+                score.text = parseFloat(score.text + 1);
+                spirit.sprite.gotoAndPlay('absorb');
+                stage.removeChild(orb.sprite);
+                orbs.splice(i, 1);
+            }
+            
+            // Orb update
+            orb.update();
         }
 
         // Check for collisions
@@ -385,15 +460,23 @@ function tick(event) {
             player.sprite.scaleX = 1;
         else if (player.speed.x < 0 && player.sprite.scaleX == 1)
             player.sprite.scaleX = -1;
-        
+
         // Now do the same thing for the enemies
         for (var i = 0; i < enemies.length; i++) {
             var enemy = enemies[i];
-            if (enemy.sprite.x < -enemy.sprite.width-30 || enemy.sprite.x > w+30) {
-                stage.removeChild(enemy.sprite);
-                enemies.splice(i, 1);
+            if (enemy.sprite.currentAnimation == 'walk')
+            {
+                if (enemy.sprite.x < -enemy.sprite.getBounds().width || enemy.sprite.x > w+enemy.sprite.getBounds().width) {
+                    stage.removeChild(enemy.sprite);
+                    enemies.splice(i, 1);
+                    // Remove player-health here.
+                    player.health--;
+                    lives.removeChildAt(lives.children.length-1);
+                    if (player.health <= 0)
+                        document.location.reload(true);
+                }
             }
-          
+
             if (!enemy.ground)
                 enemy.speed.y += 1200 * delta;
 
@@ -401,7 +484,7 @@ function tick(event) {
                 enemy.land();
             if (enemy.ground && !enemy.sensor.bottom.colliding())
                 enemy.ground = false;
-          
+
             enemy.update();
         }
         break;
@@ -414,7 +497,7 @@ function tick(event) {
 }
 
 function actorShoot() {
-    var projectile = new Actor(24, 24, this.pos.x-12, this.pos.y+24);
+    var projectile = new Actor(24, 6, this.pos.x-12, this.pos.y+24);
     projectile.speed.x = 1000 * this.sprite.scaleX;
     projectile.sprite = new createjs.Bitmap(loader.getResult('projectile'));
     projectile.sprite.scaleX = this.sprite.scaleX;
@@ -425,7 +508,7 @@ function actorShoot() {
 
 function actorJump() {
     this.ground = false;
-    this.speed.y = -600;
+    this.speed.y = -680;
 }
 
 function actorFall() {
@@ -500,12 +583,21 @@ function setBounds() { // Calculates object bounds for collision detection
     };
 }
 
-function colliding(objects) { // Compares object bounds vs objects[] to test for collision
+function colliding(_objects) { // Compares object bounds vs objects[] to test for collision
     this.setbounds();
-    if (typeof(objects) === 'undefined')
+    var objects = [];
+  
+    if (typeof(_objects) === 'undefined')
         objects = tilesets;
+    else if (typeof(_objects[0]) === 'undefined')
+        objects.push(_objects);
+    else
+        objects = _objects;
+  
     for (var i = 0; i < objects.length; i++) {
         var object = objects[i];
+        if (typeof(object.state) !== 'undefined')
+            object.setbounds();
         if (this.bound.right > object.bound.left &&
             this.bound.left < object.bound.right &&
             this.bound.bottom > object.bound.top &&
