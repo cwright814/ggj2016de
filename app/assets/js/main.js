@@ -30,7 +30,7 @@ function init() {
         {src: 'enemy3-spritesheet.png', id: 'enemy3'},
         {src: 'spirit-orb-spritesheet.png', id: 'orb'},
         {src: 'girl-spirit-spritesheet.png', id: 'girl-spirit'},
-        {src: 'heart-life.png', id: 'life'},
+        {src: 'plume-heart.png', id: 'life'},
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -229,17 +229,15 @@ function addGameScreen() {
     */
     timerSource = setInterval('spawnEnemy()', 3000); 
 
+    // Add lives
     for(var i = 0; i < 3; i++) { 
         var life = new createjs.Bitmap(loader.getResult('life'));
-          
-        life.x = 5 + (28 * i); 
+        life.x = 5 + (20 * i); 
         life.y = 5;
-        life.scaleX = 2;
-        life.scaleY = 2;
+        life.scaleX = 0.5;
+        life.scaleY = 0.5;
         life.alpha = 0.5;
-          
         lives.addChild(life); 
-        stage.update(); 
     }
 
     stage.addChild(player.sprite, lives);
@@ -362,7 +360,10 @@ function tick(event) {
 
             // Check projectile and enemy collision
             for (var j = 0; j < enemies.length; j++) {
-                //if enemies[j].sprite.hitTest)
+                console.log(projectile.sprite.x);
+                if (enemies[j].sprite.hitTest(projectile.sprite.x, projectile.sprite.y)) {
+                    console.log('hit enemy');
+                }
             }
 
         }
@@ -416,6 +417,7 @@ function actorShoot() {
     var projectile = new Actor(24, 24, this.pos.x-12, this.pos.y+24);
     projectile.speed.x = 1000 * this.sprite.scaleX;
     projectile.sprite = new createjs.Bitmap(loader.getResult('projectile'));
+    projectile.sprite.scaleX = this.sprite.scaleX;
 
     projectiles.push(projectile);
     stage.addChild(projectile.sprite);
