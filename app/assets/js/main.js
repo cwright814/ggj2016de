@@ -9,6 +9,7 @@ var input, ground, player, tilesets = [];
 var projectiles, spriteSheetPlatform;
 var enemySpritSheet1, enemySpriteSheet2, enemeySpritSheet3;
 var enemies = [];
+var lives = new createjs.Container();
 
 
 function init() {
@@ -29,6 +30,7 @@ function init() {
         {src: 'enemy3-spritesheet.png', id: 'enemy3'},
         {src: 'spirit-orb-spritesheet.png', id: 'orb'},
         {src: 'girl-spirit-spritesheet.png', id: 'girl-spirit'},
+        {src: 'heart-life.png', id: 'life'},
     ];
 
     loader = new createjs.LoadQueue(false);
@@ -187,7 +189,7 @@ function addGameScreen() {
     enemySpriteSheet2 = new createjs.SpriteSheet({
         framerate: 10,
         'images': [loader.getResult('enemy2')],
-        'frames': {'width': 128, 'height': 128, 'regX': 69, 'regY': 30, 'count': 10},
+        'frames': {'width': 128, 'height': 128, 'regX': 64, 'regY': 64, 'count': 10},
         'animations': {
             'walk': [5, 9],
             'die': [0, 3],
@@ -206,7 +208,7 @@ function addGameScreen() {
     });
     var spiritSprite = new createjs.Sprite(spiritSpriteSheet, 'float');
     spiritSprite.x = w/2;
-    spiritSprite.y = h/2
+    spiritSprite.y = h/2;
 
     stage.addChild(background, ground);
     
@@ -224,20 +226,41 @@ function addGameScreen() {
     }
     */
     timerSource = setInterval('spawnEnemy()', 3000); 
-  
-    stage.addChild(spiritSprite, player.sprite);
+
+    for(var i = 0; i < 3; i++) { 
+        var life = new createjs.Bitmap(loader.getResult("life"));
+          
+        life.x = 5 + (28 * i); 
+        life.y = 5;
+        life.scaleX = 2;
+        life.scaleY = 2;
+          
+        lives.addChild(life); 
+        stage.update(); 
+    }
+    stage.addChild(spiritSprite, player.sprite, lives);
 }
 
 function spawnEnemy() {
     var direction = Math.random() < 0.5 ? -1 : 1;
     var xStart  = direction == -1 ? w+30: -30;
-    enemy = new Actor(64, 128, xStart, getRandomInt(100, 500), 'walk', false);
-    enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
+    var enemyType = getRandomInt(1, 3);
+    switch (enemyType) {
+        case 1:
+            enemy = new Actor(64, 128, xStart, getRandomInt(100, 500), 'walk', false);
+            enemy.sprite = new createjs.Sprite(enemySpriteSheet1, 'walk');
+            break;
+        case 2:
+            enemy = new Actor(64, 128, xStart, getRandomInt(100, 500), 'walk', false);
+            enemy.sprite = new createjs.Sprite(enemySpriteSheet2, 'walk');
+            break;
+    }
     enemy.initsensor('right', 4, enemy.height-8, enemy.width/2, 0);
     enemy.initsensor('left', 4, enemy.height-8, -enemy.width/2, 0);
     enemy.initsensor('bottom', enemy.width, 4, 0, enemy.height/2);
     enemy.speed.x = getRandomInt(100, 300) * direction;
     enemy.sprite.scaleX = direction;
+    enemy.sprite.alpha = 0.6;
     enemies.push(enemy)
     stage.addChild(enemy.sprite);
 }
