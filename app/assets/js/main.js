@@ -7,7 +7,7 @@ var TitleView = new createjs.Container();
 
 // Game Screen
 var input, ground, player, tilesets = [];
-var projectiles;
+var projectiles, spriteSheetPlatform;
 
 
 function init() {
@@ -19,6 +19,7 @@ function init() {
 
     manifest = [
         {src: 'spritesheet_placeholder.png', id: 'character'},
+        {src: 'tile2.png', id: 'platform'},
         {src: 'ground.png', id: 'ground'},
         {src: 'projectile.png', id: 'projectile'},
         {src: 'background-2.png', id: 'background'}
@@ -49,8 +50,10 @@ function Actor(width, height, x, y, state, ground) {
         y: 0};
     this.state = state;
     this.ground = ground;
+    this.groundIgnore = 0;
     this.shoot = actorShoot;
     this.jump = actorJump;
+    this.fall = actorFall;
     this.land = actorLand;
     this.setbounds = setBounds;
     this.updatepos = updatePos;
@@ -61,11 +64,24 @@ function Actor(width, height, x, y, state, ground) {
 }
 
 function handleComplete() {
+    createjs.Ticker.timingMode = createjs.Ticker.RAF;
+    createjs.Ticker.addEventListener('tick', tick);
     addTitleScreen();
 }
 
 function addTitleScreen() {
     stage.enableMouseOver(10);
+    stage.state = 'title';
+    input = {
+        left: false,
+        right: false,
+        down: false,
+        jump: false,
+        fire: false
+    };
+    this.document.onkeydown = keyPressedDown;
+    this.document.onkeyup = keyPressedUp;
+  
     var titleText = new createjs.Text("Bring Me Back", "48px Tahoma, Geneva, sans-serif", "#FFF");
     titleText.textAlign = "center";
     titleText.x = w/2;
@@ -83,11 +99,10 @@ function addTitleScreen() {
     startText.on("mouseover", hoverEffect);
     startText.on("mouseout", hoverEffect);
     startText.on("mousedown", transitionTitleView);
-
+  
     TitleView.addChild(titleText, startText);
     stage.addChild(TitleView);
     stage.update();
-
 }
 
 function hoverEffect(event) {
@@ -104,23 +119,18 @@ function transitionTitleView() {
 
 function addGameScreen() {
     stage.enableMouseOver(0);
-    input = {
-        left: false,
-        right: false,
-        jump: false,
-        fire: false
-    };
+    stage.state = 'game';
   
     player = new Actor(82, 292, w/2, 350, 'stand', true);
-    //player.initsensor('right', 4, player.height-8, player.width/2, 0);
-    //player.initsensor('left', 4, player.height-8, -player.width/2, 0);
+    player.initsensor('right', 4, player.height-8, player.width/2, 0);
+    player.initsensor('left', 4, player.height-8, -player.width/2, 0);
     player.initsensor('bottom', player.width, 4, 0, player.height/2);
     //player.initsensor('top', player.width, 4, 0, -player.height/2);
     player.hasFired = false;
 
     background = new createjs.Shape();
     background.graphics.beginBitmapFill(loader.getResult('background')).drawRect(0, 0, w, h);
-    background.alpha = 0.75;
+    background.alpha = 0.9;
 
     var groundImg = loader.getResult('ground');
     ground = new createjs.Shape();
@@ -158,29 +168,35 @@ function addGameScreen() {
     player.sprite = new createjs.Sprite(spriteSheet, 'stand');
     player.sprite.x = player.pos.x;
     player.sprite.y = player.pos.y;
+  
+    /*
+    spriteSheetPlatform = new createjs.SpriteSheet({
+        framerate: 8,
+        'images': [loader.getResult('platform')],
+        'frames': {'width': 48, 'height': 48, 'regX': 0, 'regY': 0, 'count': 4},
+        'animations': {
+            'pulse': {'frames': [0,0,1,1,3,3,2,2,2,2,3,3,1,1,0,0]}
+        }
+    });
+    */
 
     stage.addChild(background, ground);
     
     // Generate platforms
-    for ( i = 1; i < 5; i++ ) {
-        var x = Math.random() * 980 + 24;
-        var y = Math.random() * 540;
-        addPlatform(x, y);
+    for ( k = 0; k < 4; k++ ) {
+        for ( i = 0; i < 2; i++ ) {
+            var x = Math.random() * (w - 48);
+            var y = Math.random() * (h/4 - 96) + h/5*k + 96;
+            addPlatform(x, y);
+        }
     }
   
     stage.addChild(player.sprite);
-  
-    createjs.Ticker.timingMode = createjs.Ticker.RAF;
-    createjs.Ticker.addEventListener('tick', tick);
-  
-    this.document.onkeydown = keyPressedDown;
-    this.document.onkeyup = keyPressedUp;
 }
 
 function addPlatform(x, y) {
-    //var sprite = new createjs.Bitmap(spriteImg);
     var length = 3 + Math.floor(Math.random() * 3) * 2;
-    var spriteImg = loader.getResult('ground');
+    var spriteImg = loader.getResult('platform');
     var sprite = new createjs.Shape();
     sprite.graphics.beginBitmapFill(spriteImg).drawRect(0, 0, spriteImg.width * length, spriteImg.height);
     sprite.x = Math.round(x);
@@ -205,73 +221,91 @@ function addPlatform(x, y) {
 function tick(event) {
     delta = event.delta / 1000;
 
-    // Player inputs
-    player.speed.x = 0;
-
-    if (input.right) {
-        player.speed.x = 300;
-    }
-    if (input.left) {
-        player.speed.x = -300;
-    }
-    if (input.jump && player.ground) {
-        player.jump();
-    }
-    if (input.fire && !player.hasFired) {
-        player.shoot();
-        player.hasFired = true;
-    }
-    if (player.hasFired && !input.fire) {
-        player.hasFired = false;
-    }
-
-    // Player momentum
-    if (!player.ground)
-        player.speed.y += 1200 * delta;
-
-    // Player states
-    if (player.ground) {
-        if (player.speed.x == 0)
-            player.state = 'stand';
-        else
-            player.state = 'run';
-    }
-    else {
-        if (player.speed.y <= 0)
-            player.state = 'jump';
-        else
-            player.state = 'fall';
-    }
-  
-    // Update player and sensors
-    player.update();
-
-    // Projectiles update/destruction
-    for(var i = 0; i < projectiles.length; i++) { 
-        var projectile = projectiles[i];
-        projectile.updatepos();
-        // Remove projectiles no longer on screen
-        if (projectile.sprite.x < -projectile.sprite.getBounds().width || projectile.sprite.x > w) {
-            stage.removeChild(projectile.sprite);
-            projectiles.splice(i, 1);
+    switch (stage.state) {
+    case 'title':
+        if (input.fire)
+        {
+            input.fire = false;
+            transitionTitleView();
         }
+        break;
+    case 'game':
+        // Player inputs
+        player.speed.x = 0;
+
+        if (input.right) {
+            player.speed.x = 300;
+        }
+        if (input.left) {
+            player.speed.x = -300;
+        }
+        if (input.jump && player.ground) {
+            if (!input.down)
+                player.jump();
+            else if (player.pos.y < 410)
+                player.fall();
+        }
+        if (input.fire && !player.hasFired) {
+            player.shoot();
+            player.hasFired = true;
+        }
+        if (player.hasFired && !input.fire) {
+            player.hasFired = false;
+        }
+
+        // Player momentum
+        if (!player.ground)
+            player.speed.y += 1200 * delta;
+
+        // Player states
+        if (player.ground) {
+            if (player.speed.x == 0)
+                player.state = 'stand';
+            else
+                player.state = 'run';
+        }
+        else {
+            if (player.speed.y <= 0)
+                player.state = 'jump';
+            else
+                player.state = 'fall';
+        }
+
+        // Update player and sensors
+        player.update();
+
+        // Projectiles update/destruction
+        for(var i = 0; i < projectiles.length; i++) { 
+            var projectile = projectiles[i];
+            projectile.updatepos();
+            // Remove projectiles no longer on screen
+            if (projectile.sprite.x < -projectile.sprite.getBounds().width || projectile.sprite.x > w) {
+                stage.removeChild(projectile.sprite);
+                projectiles.splice(i, 1);
+            }
+        }
+
+        // Check for collisions
+        if (!player.ground && player.groundIgnore <= 0 && player.speed.y > 0 && player.sensor.bottom.colliding())
+            player.land();
+        if ((player.ground && !player.sensor.bottom.colliding()) || player.groundIgnore > 0)
+            player.ground = false;
+        if (player.groundIgnore > 0)
+            player.groundIgnore -= delta;
+
+        // Set player animation
+        if (player.sprite.currentAnimation != player.state)
+            player.sprite.gotoAndPlay(player.state);
+
+        // Set player orientation
+        if (player.speed.x > 0 && player.sprite.scaleX == -1)
+            player.sprite.scaleX = 1;
+        else if (player.speed.x < 0 && player.sprite.scaleX == 1)
+            player.sprite.scaleX = -1;
+        break;
+    default:
+        break;
     }
-
-    // Check for collisions
-    if (!player.ground && player.speed.y > 0 && player.sensor.bottom.colliding())
-        player.land();
-    if (player.ground && !player.sensor.bottom.colliding())
-        player.ground = false;
-
-    // Set player animation
-    if (player.sprite.currentAnimation != player.state)
-        player.sprite.gotoAndPlay(player.state);
-
-    // Set player orientation
-    if (player.speed.x > 0 && player.sprite.scaleX == -1)
-        player.sprite.scaleX = 1;
-    else if (player.speed.x < 0 && player.sprite.scaleX == 1)
-        player.sprite.scaleX = -1;
 
     // Update stage
     stage.update(event);
@@ -289,6 +323,11 @@ function actorShoot() {
 function actorJump() {
     this.ground = false;
     this.speed.y = -600;
+}
+
+function actorFall() {
+    this.ground = false;
+    this.groundIgnore = 0.3;
 }
 
 function actorLand() {
@@ -373,6 +412,9 @@ function keyPressedDown() {
     if (key.isPressed('right') || key.isPressed('d')) {
         input.right = true;
     }
+    if (key.isPressed('down') || key.isPressed('s')) {
+        input.down = true;
+    }
     if (key.isPressed('up') || key.isPressed('w')) {
         input.jump = true;
     }
@@ -387,6 +429,9 @@ function keyPressedUp() {
     }
     if (!key.isPressed('right') && !key.isPressed('d')) {
         input.right = false;
+    }
+    if (!key.isPressed('down') && !key.isPressed('s')) {
+        input.down = false;
     }
     if (!key.isPressed('up') && !key.isPressed('w')) {
         input.jump = false;
