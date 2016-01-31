@@ -23,7 +23,7 @@ function init() {
         {src: 'huyana.png', id: 'character'},
         {src: 'tile4.png', id: 'platform'},
         {src: 'ground.png', id: 'ground'},
-        {src: 'projectile.png', id: 'projectile'},
+        {src: 'arrow-1.png', id: 'projectile'},
         {src: 'background-2.png', id: 'background'},
         {src: 'enemy1-spritesheet.png', id: 'enemy1'},
         {src: 'enemy2-spritesheet.png', id: 'enemy2'},
@@ -212,7 +212,7 @@ function addGameScreen() {
     spiritSprite.x = w/2;
     spiritSprite.y = h/2;
 
-    stage.addChild(background, ground);
+    stage.addChild(background, ground, spiritSprite);
     
     // Generate platforms
     for ( k = 0; k < 4; k++ ) {
@@ -236,11 +236,13 @@ function addGameScreen() {
         life.y = 5;
         life.scaleX = 2;
         life.scaleY = 2;
+        life.alpha = 0.5;
           
         lives.addChild(life); 
         stage.update(); 
     }
-    stage.addChild(spiritSprite, player.sprite, lives);
+
+    stage.addChild(player.sprite, lives);
 }
 
 function spawnEnemy() {
@@ -357,6 +359,12 @@ function tick(event) {
                 stage.removeChild(projectile.sprite);
                 projectiles.splice(i, 1);
             }
+
+            // Check projectile and enemy collision
+            for (var j = 0; j < enemies.length; j++) {
+                //if enemies[j].sprite.hitTest)
+            }
+
         }
 
         // Check for collisions
@@ -405,7 +413,7 @@ function tick(event) {
 }
 
 function actorShoot() {
-    var projectile = new Actor(24, 24, this.pos.x-12, this.pos.y-12);
+    var projectile = new Actor(24, 24, this.pos.x-12, this.pos.y+24);
     projectile.speed.x = 1000 * this.sprite.scaleX;
     projectile.sprite = new createjs.Bitmap(loader.getResult('projectile'));
 
