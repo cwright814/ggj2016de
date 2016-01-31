@@ -1,4 +1,11 @@
-var stage, w, h, loader;
+// Stage Variables
+var stage, w, h, loader, delta;
+
+// Title Screen
+var startButton;
+var TitleView = new createjs.Container();
+
+// Game Screen
 var input, ground, player, tilesets = [];
 var projectiles;
 
@@ -13,13 +20,52 @@ function init() {
     manifest = [
         {src: 'spritesheet_placeholder.png', id: 'character'},
         {src: 'ground.png', id: 'ground'},
-        {src: 'projectile.png', id: 'projectile'}
-
+        {src: 'projectile.png', id: 'projectile'},
+        {src: 'background.png', id: 'background'}
     ];
 
     loader = new createjs.LoadQueue(false);
     loader.addEventListener('complete', handleComplete);
     loader.loadManifest(manifest, true, 'assets/sprites/');
+}
+
+function Actor(width, height, x, y, state, ground) {
+    if (typeof(x) === 'undefined')
+        var x = 0;
+    if (typeof(y) === 'undefined')
+        var y = 0;
+    if (typeof(state) === 'undefined')
+        var state = null;
+    if (typeof(ground) === 'undefined')
+        var ground = false;
+  
+    this.width = width;
+    this.height = height;
+    this.pos = {
+        x: x,
+        y: y};
+    this.speed = {
+        x: 0,
+        y: 0};
+    this.state = state;
+    this.ground = ground;
+    this.shoot = actorShoot;
+    this.jump = actorJump;
+    this.land = actorLand;
+    this.setbounds = setBounds;
+    this.updatepos = updatePos;
+    this.initsensor = initSensor;
+    this.update = actorUpdate;
+    this.updatesensors = actorUpdateSensors;
+    this.colliding = colliding;
+}
+
+function addTitleScreen() {
+    var titleText = new createjs.Text("Bring Me Back", "36px Arial", "#000");
+    titleText.textAlign = "center";
+    titleText.x = w/2;
+    titleText.y = 0;
+    stage.addChild(titleText);
 }
 
 function handleComplete() {
@@ -30,31 +76,16 @@ function handleComplete() {
         fire: false
     };
   
-    player = {
-        width: 292,
-        height: 165,
-        pos: {
-            x: w/2,
-            y: 410},
-        speed: {
-            x: 2,
-            y: 0},
-        state: 'stand',
-        ground: true,
-        shoot: actorShoot,
-        jump: actorJump,
-        land: actorLand,
-        setbounds: setBounds,
-        updatepos: updatePos,
-        initsensor: initSensor,
-        update: actorUpdate,
-        updatesensors: actorUpdateSensors,
-        colliding: colliding
-    };
+    player = new Actor(292, 165, w/2, 410, 'stand', true);
     player.initsensor('right', 4, player.height-8, player.width/2, 0);
     player.initsensor('left', 4, player.height-8, -player.width/2, 0);
     player.initsensor('bottom', player.width, 4, 0, player.height/2);
     player.initsensor('top', player.width, 4, 0, -player.height/2);
+    player.hasFired = false;
+
+    background = new createjs.Shape();
+    background.graphics.beginBitmapFill(loader.getResult('background')).drawRect(0, 0, w, h);
+    background.alpha = 0.75;
 
     var groundImg = loader.getResult('ground');
     ground = new createjs.Shape();
@@ -82,7 +113,7 @@ function handleComplete() {
         'frames': {'regX': 82, 'height': 292, 'count': 64, 'regY': 204, 'width': 165},
         'animations': {
             'run': [0, 25, 'run', 1],
-            'stand': [58, 60, 'stand', 0.25],
+            'stand': [56, 59, 'stand', 0.25],
             'jump': [36, 36, 'jump'],
             'fall': [53, 53, 'fall']
         }
@@ -92,7 +123,7 @@ function handleComplete() {
     player.sprite.x = player.pos.x;
     player.sprite.y = player.pos.y;
 
-    stage.addChild(ground, player.sprite);
+    stage.addChild(background, ground, player.sprite);
     createjs.Ticker.timingMode = createjs.Ticker.RAF;
     createjs.Ticker.addEventListener('tick', tick);
   
@@ -101,7 +132,7 @@ function handleComplete() {
 }
 
 function tick(event) {
-    var delta = event.delta / 1000;
+    delta = event.delta / 1000;
 
     // Player inputs
     player.speed.x = 0;
@@ -111,10 +142,16 @@ function tick(event) {
     }
     if (input.left) {
         player.speed.x = -300;
-
     }
     if (input.jump && player.ground) {
         player.jump();
+    }
+    if (input.fire && !player.hasFired) {
+        player.shoot();
+        player.hasFired = true;
+    }
+    if (player.hasFired && !input.fire) {
+        player.hasFired = false;
     }
 
     // Player momentum
@@ -136,14 +173,15 @@ function tick(event) {
     }
   
     // Update player and sensors
-    player.update(delta);
+    player.update();
 
     // Projectiles
     for(var i = 0; i < projectiles.length; i++) { 
-        projectiles[i].graphic.x += projectiles[i].speed * projectiles[i].direction;
+        var projectile = projectiles[i];
+        projectile.updatepos();
         // Remove projectiles no longer on screen
-        if (projectiles[i].graphic.x < 0 - projectiles[i].graphic.width || projectiles[i].graphic.x > w) {
-            stage.removeChild(projectiles[i].graphic);
+        if (projectile.sprite.x < -projectile.sprite.getBounds().width || projectile.sprite.x > w) {
+            stage.removeChild(projectile.graphic);
             projectiles.splice(i, 1);
         }
     }
@@ -167,16 +205,12 @@ function tick(event) {
 }
 
 function actorShoot() {
-    var projectile = {
-        speed: 10,
-        direction: player.sprite.scaleX,
-        graphic: new createjs.Bitmap(loader.getResult("projectile"))
-    };
+    var projectile = new Actor(24, 24, this.pos.x-12, this.pos.y-12);
+    projectile.speed.x = 1000 * this.sprite.scaleX;
+    projectile.sprite = new createjs.Bitmap(loader.getResult('projectile'));
 
-    projectile.graphic.x = player.pos.x;
-    projectile.graphic.y = player.pos.y;
     projectiles.push(projectile);
-    stage.addChild(projectile.graphic);
+    stage.addChild(projectile.sprite);
 }
 
 function actorJump() {
@@ -190,8 +224,8 @@ function actorLand() {
     // Add repositioning logic here
 }
 
-function actorUpdate(delta) {
-    this.updatepos(delta);
+function actorUpdate() {
+    this.updatepos();
     this.updatesensors();
 }
 
@@ -221,7 +255,7 @@ function initSensor(label, width, height, offsetX, offsetY) { // Creates child (
     };
 }
 
-function updatePos(delta) {
+function updatePos() {
     if (typeof(this.offset) !== 'undefined') { // Sensor positioning
         this.pos.x = this.parent.pos.x + this.offset.x;
         this.pos.y = this.parent.pos.y + this.offset.y;
@@ -269,9 +303,8 @@ function keyPressedDown() {
     if (key.isPressed('up') || key.isPressed('w')) {
         input.jump = true;
     }
-    if (key.isPressed('space') || key.isPressed('s')) {
+    if (key.isPressed('space') || key.isPressed('enter')) {
         input.fire = true;
-        player.shoot();
     }
 }
 
@@ -285,7 +318,7 @@ function keyPressedUp() {
     if (!key.isPressed('up') && !key.isPressed('w')) {
         input.jump = false;
     }
-    if (!key.isPressed('space') && !key.isPressed('s')) {
+    if (!key.isPressed('space') && !key.isPressed('enter')) {
         input.fire = false;
     }
 }
